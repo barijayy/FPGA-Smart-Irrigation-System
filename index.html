@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPGA Irrigation Simulator — Spartan-6</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e1a; --panel:#0d1220; --card:#111827; --hover:#1a2235;
+  --border:#1e2d45; --borderB:#2a4060;
+  --acc:#00d4aa; --acc2:#0ea5e9; --acc3:#f59e0b;
+  --red:#ef4444; --grn:#22c55e; --pur:#c084fc;
+  --txt:#e2e8f0; --dim:#64748b; --mid:#94a3b8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{height:50px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:var(--acc);}
+.logo-ico{width:26px;height:26px;background:linear-gradient(135deg,var(--acc),var(--acc2));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.proj{font-size:11px;color:var(--mid);padding:3px 10px;background:var(--card);border:1px solid var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;}
+.badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:1px;background:var(--card);border:1px solid var(--border);color:var(--dim);}
+.badge.running{background:rgba(0,212,170,.1);border-color:var(--acc);color:var(--acc);animation:blink2 1.5s infinite;}
+.badge.programmed{background:rgba(124,58,237,.1);border-color:var(--pur);color:var(--pur);}
+@keyframes blink2{0%,100%{opacity:1}50%{opacity:.55}}
+.tr{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.btn{padding:6px 14px;border-radius:7px;font-family:'Exo 2',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;display:flex;align-items:center;gap:5px;}
+.btn-run{background:linear-gradient(135deg,var(--acc),#00a882);color:#001a14;box-shadow:0 0 12px rgba(0,212,170,.2);}
+.btn-run:hover{box-shadow:0 0 22px rgba(0,212,170,.45);transform:translateY(-1px);}
+.btn-stop{background:linear-gradient(135deg,var(--red),#b91c1c);color:#fff;display:none;}
+.btn-prog{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;}
+.btn-prog:hover{opacity:.9;transform:translateY(-1px);}
+.btn-prog.done{background:linear-gradient(135deg,var(--grn),#16a34a);}
+.btn-ol{background:transparent;color:var(--mid);border:1px solid var(--borderB);font-size:11px;}
+.btn-ol:hover{background:var(--hover);color:var(--txt);}
+.vsw{display:flex;background:var(--card);border:1px solid var(--border);border-radius:7px;overflow:hidden;}
+.vb{padding:5px 13px;font-size:11px;font-weight:600;cursor:pointer;color:var(--dim);border:none;background:transparent;font-family:'Exo 2',sans-serif;transition:all .2s;}
+.vb.active{background:var(--acc);color:#001a14;}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;overflow:hidden;min-height:0;}
+
+/* ── LEFT EDITOR ── */
+.ed{width:330px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--panel);}
+.tabs{display:flex;border-bottom:1px solid var(--border);}
+.tab{padding:9px 13px;font-size:10px;font-weight:600;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc);}
+.tc{display:none;flex:1;flex-direction:column;min-height:0;}
+.tc.active{display:flex;}
+.chdr{padding:8px 12px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.ftag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);background:var(--hover);padding:2px 9px;border-radius:4px;border:1px solid var(--border);}
+.ca{flex:1;position:relative;min-height:0;}
+.ln{position:absolute;left:0;top:0;bottom:0;width:36px;background:var(--card);border-right:1px solid var(--border);padding:13px 5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:1.72;text-align:right;overflow:hidden;user-select:none;}
+.ce{position:absolute;left:36px;top:0;right:0;bottom:0;background:transparent;color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.72;padding:13px 10px;border:none;resize:none;outline:none;white-space:pre;overflow:auto;tab-size:2;caret-color:var(--acc);}
+/* config tab */
+.cb{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+.cg{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:12px;}
+.cl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:9px;display:flex;align-items:center;gap:5px;}
+.dot{width:6px;height:6px;border-radius:50%;}
+.sr{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--mid);margin-bottom:6px;}
+.vc{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--acc);background:rgba(0,212,170,.1);padding:2px 9px;border-radius:4px;min-width:44px;text-align:center;}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--borderB);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--acc);cursor:pointer;}
+.togrow{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-top:1px solid var(--border);margin-top:7px;font-size:10px;color:var(--mid);}
+.tog{width:32px;height:18px;background:var(--borderB);border-radius:9px;cursor:pointer;position:relative;transition:all .3s;border:none;outline:none;}
+.tog::after{content:'';position:absolute;left:3px;top:2px;width:14px;height:14px;background:var(--dim);border-radius:50%;transition:all .3s;}
+.tog.on{background:rgba(0,212,170,.25);border:1px solid var(--acc);}
+.tog.on::after{left:14px;background:var(--acc);}
+/* board info tab */
+.bi{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;}
+.bsg{background:var(--card);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.bsh{padding:8px 12px;background:rgba(0,212,170,.05);border-bottom:1px solid var(--border);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--acc);}
+.bsr{display:flex;padding:5px 12px;border-bottom:1px solid rgba(30,45,69,.4);font-size:9.5px;}
+.bsr:last-child{border-bottom:none;}
+.bsk{color:var(--dim);width:105px;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.bsv{color:var(--txt);font-family:'JetBrains Mono',monospace;}
+.bsv.a{color:var(--acc);} .bsv.g{color:var(--grn);} .bsv.b{color:var(--acc2);}
+.pm{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;}
+.pi{background:var(--hover);border-radius:5px;padding:4px 7px;font-size:9px;font-family:'JetBrains Mono',monospace;}
+.pn{color:var(--acc);font-weight:700;} .pl{color:var(--dim);} .pf{color:var(--mid);}
+.pi.ap{border:1px solid var(--acc);background:rgba(0,212,170,.07);}
+
+/* ── CENTER ── */
+.center{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;}
+.ctbar{height:40px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:7px;flex-shrink:0;}
+.tb{width:28px;height:28px;border-radius:6px;background:var(--card);border:1px solid var(--border);color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;}
+.tb:hover{background:var(--hover);color:var(--txt);}
+.sep{width:1px;height:20px;background:var(--border);margin:0 2px;}
+.zlbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);padding:3px 8px;background:var(--card);border:1px solid var(--border);border-radius:5px;margin-left:auto;}
+
+/* Canvas areas */
+.cv{flex:1;position:relative;overflow:hidden;background:var(--bg);min-height:0;}
+.cv::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(30,45,69,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(30,45,69,.14) 1px,transparent 1px);background-size:24px 24px;pointer-events:none;z-index:0;}
+.cv svg{position:absolute;inset:0;width:100%;height:100%;}
+
+/* Board view */
+.bv{flex:1;position:relative;overflow:auto;background:#04100a;display:none;min-height:0;align-items:center;justify-content:center;}
+
+/* Wire animation */
+.wi{stroke:#2a3a50;stroke-width:1.8;fill:none;}
+.wa{stroke:var(--acc);stroke-width:2;fill:none;stroke-dasharray:8 4;animation:fl .5s linear infinite;filter:drop-shadow(0 0 3px rgba(0,212,170,.5));}
+.wg{stroke:var(--grn);stroke-width:2;fill:none;stroke-dasharray:8 4;animation:fl .5s linear infinite;filter:drop-shadow(0 0 3px rgba(34,197,94,.5));}
+.wb{stroke:var(--acc2);stroke-width:2;fill:none;stroke-dasharray:8 4;animation:fl .5s linear infinite;}
+.wo{stroke:var(--acc3);stroke-width:2;fill:none;stroke-dasharray:8 4;animation:fl .45s linear infinite;}
+.wr{stroke:var(--red);stroke-width:2;fill:none;stroke-dasharray:8 4;animation:fl .5s linear infinite;filter:drop-shadow(0 0 3px rgba(239,68,68,.5));}
+@keyframes fl{to{stroke-dashoffset:-12}}
+
+/* ── RIGHT OUTPUT ── */
+.out{width:214px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--panel);}
+.oh{padding:10px 12px;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--dim);display:flex;align-items:center;gap:6px;}
+.wa2{padding:10px;border-bottom:1px solid var(--border);}
+.wlbl{font-size:9px;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-bottom:5px;display:flex;justify-content:space-between;}
+canvas{width:100%;display:block;border-radius:4px;}
+.sa{padding:11px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+.srow{display:flex;align-items:center;justify-content:space-between;}
+.sname{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--mid);display:flex;align-items:center;gap:5px;}
+.sind{width:6px;height:6px;border-radius:2px;}
+.sv{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;}
+.hi{color:var(--acc);background:rgba(0,212,170,.1);}
+.lo{color:var(--dim);background:var(--card);}
+.la{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:2px;}
+.le{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);display:flex;gap:6px;padding:2px 4px;line-height:1.5;}
+.le.info{color:var(--acc2);}
+.le.ok{color:var(--grn);background:rgba(34,197,94,.04);}
+.le.warn{color:var(--acc3);}
+.le.prog{color:var(--pur);}
+.lts{color:var(--borderB);flex-shrink:0;}
+
+/* ── STATUS BAR ── */
+.sb{height:24px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:16px;font-size:9.5px;color:var(--dim);font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+.si{display:flex;align-items:center;gap:4px;}
+.sd{width:5px;height:5px;border-radius:50%;background:var(--dim);}
+.sd.active{background:var(--acc);animation:bl 1s infinite;}
+.sd.prog{background:var(--pur);}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--borderB);border-radius:3px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:32px;right:16px;background:var(--card);border:1px solid var(--acc);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--acc);opacity:0;transform:translateY(8px);transition:all .3s;z-index:999;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+
+/* ── SYNTH MODAL ── */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;}
+.mo.open{display:flex;}
+.mbox{width:500px;background:var(--panel);border:1px solid var(--border);border-radius:13px;overflow:hidden;box-shadow:0 0 50px rgba(0,0,0,.8);}
+.mhdr{padding:15px 18px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.mhdr h2{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;}
+.mcl{background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:17px;line-height:1;}
+.mbody{padding:18px;display:flex;flex-direction:column;gap:10px;}
+.mstep{display:flex;align-items:center;gap:12px;padding:9px 13px;border-radius:8px;background:var(--card);border:1px solid var(--border);transition:all .35s;}
+.mstep.run{border-color:var(--acc);background:rgba(0,212,170,.05);}
+.mstep.done{border-color:var(--grn);background:rgba(34,197,94,.04);}
+.mico{width:30px;height:30px;border-radius:50%;background:var(--hover);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:all .35s;}
+.mstep.run .mico{border-color:var(--acc);animation:sp .8s linear infinite;}
+.mstep.done .mico{border-color:var(--grn);background:rgba(34,197,94,.1);}
+@keyframes sp{to{transform:rotate(360deg);}}
+.mn{font-size:11px;font-weight:600;color:var(--mid);}
+.mstep.run .mn{color:var(--acc);}
+.mstep.done .mn{color:var(--grn);}
+.md{font-size:9.5px;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.mt{font-size:9.5px;color:var(--dim);font-family:'JetBrains Mono',monospace;}
+.mlog{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:9px;font-family:'JetBrains Mono',monospace;font-size:9px;height:90px;overflow-y:auto;color:var(--dim);line-height:1.6;}
+.mprog{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:6px;}
+.mpf{height:100%;width:0%;background:linear-gradient(to right,var(--acc),var(--acc2));border-radius:2px;transition:width .35s ease;}
+.mft{padding:12px 18px;background:var(--card);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.mst{font-size:10.5px;color:var(--mid);font-family:'JetBrains Mono',monospace;}
+.mst.done{color:var(--grn);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo"><div class="logo-ico">⬛</div>FPGA<span style="color:var(--acc2)">Sim</span></div>
+  <div class="proj">irrigation_system.v — Spartan-6 XC6SLX9</div>
+  <div class="badge" id="badge">IDLE</div>
+  <div class="tr">
+    <div class="vsw">
+      <button class="vb active" id="vSch" onclick="setView('sch')">⊟ Schematic</button>
+      <button class="vb" id="vBrd" onclick="setView('brd')">🔌 FPGA Board</button>
+    </div>
+    <div style="width:1px;height:22px;background:var(--border);margin:0 2px;"></div>
+    <button class="btn btn-ol" onclick="doReset()">⟳ Reset</button>
+    <button class="btn btn-prog" id="progBtn" onclick="openSynth()">⚡ Program FPGA</button>
+    <button class="btn btn-run" id="runBtn" onclick="startSim()">▶ Run Simulation</button>
+    <button class="btn btn-stop" id="stopBtn" onclick="stopSim()">■ Stop</button>
+  </div>
+</div>
+
+<div class="main">
+<!-- ═══════ LEFT EDITOR ═══════ -->
+<div class="ed">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('code',this)">Code</div>
+    <div class="tab" onclick="switchTab('ucf',this)">Constraints</div>
+    <div class="tab" onclick="switchTab('binfo',this)">Board Info</div>
+    <div class="tab" onclick="switchTab('sens',this)">Sensor</div>
+  </div>
+
+  <!-- CODE -->
+  <div class="tc active" id="tc-code">
+    <div class="chdr"><span class="ftag">irrigation_system.v</span><span style="font-size:9px;color:var(--dim)">Verilog HDL</span></div>
+    <div class="ca">
+      <div class="ln" id="lnum"></div>
+      <textarea class="ce" id="codeEd" spellcheck="false" oninput="updLN()">
+// PROJECT  : Automatic Irrigation System
+// SENSOR   : JXCT Soil 7-in-1 Modbus RS485 (5V)
+// DEVICE   : Xilinx FPGA XC7A35T Artix-7
+
+module irrigation_system (
+    input  wire        clk,          // FPGA system clock
+    input  wire        rst,          // Active-high reset
+    input  wire        rx,           // RS485 UART receive line (Modbus)
+
+    // 7 Sensor Parameters (decoded from Modbus RS485 frame)
+    input  wire [11:0] moisture,     // Soil moisture    (0–1000, unit: 0.1%)
+    input  wire [11:0] temperature,  // Soil temperature (0–800,  unit: 0.1°C)
+    input  wire [11:0] ec,           // Electrical cond. (0–9999, µS/cm)
+    input  wire [11:0] ph,           // Soil pH value    (0–140,  unit: 0.1)
+    input  wire [11:0] nitrogen,     // Nitrogen (N)     (0–1999, mg/kg)
+    input  wire [11:0] phosphorus,   // Phosphorus (P)   (0–1999, mg/kg)
+    input  wire [11:0] potassium,    // Potassium (K)    (0–1999, mg/kg)
+
+    // Outputs
+    output reg         pump,         // Water pump relay control
+    output reg         led_green,    // Green LED: Pump ON
+    output reg         led_red,      // Red LED:   Pump OFF / Alert
+    output reg         alert,        // Alert: unsafe soil condition
+
+    // RS485 Modbus TX (for requesting next sensor read)
+    output reg         tx,
+    output reg [7:0]   modbus_cmd    // Modbus RTU command byte
+);
+
+// ─── THRESHOLD CONSTANTS (Pre-set in FPGA logic fabric) ──────────────────
+// These are hardware constants — not variables.
+// Simple sensor CANNOT provide all these parameters.
+localparam MOIST_LOW    = 12'd300;   // Below 30.0% → DRY → Pump ON
+localparam MOIST_HIGH   = 12'd700;   // Above 70.0% → WET → Pump OFF
+localparam TEMP_MAX     = 12'd450;   // Above 45.0°C → Unsafe for irrigation
+localparam EC_MAX       = 12'd2000;  // Above 2000 µS/cm → Soil salinity too high
+localparam PH_LOW       = 12'd50;    // Below pH 5.0 → Acidic → Alert
+localparam PH_HIGH      = 12'd85;    // Above pH 8.5 → Alkaline → Alert
+localparam N_LOW        = 12'd50;    // Below 50 mg/kg → Nitrogen deficiency
+localparam P_LOW        = 12'd30;    // Below 30 mg/kg → Phosphorus deficiency
+localparam K_LOW        = 12'd100;   // Below 100 mg/kg → Potassium deficiency
+
+// ─── STATE MACHINE STATES ────────────────────────────────────────────────
+localparam IDLE         = 2'b00;
+localparam READ_SENSOR  = 2'b01;
+localparam PROCESS      = 2'b10;
+localparam OUTPUT       = 2'b11;
+
+reg [1:0] state;
+reg [1:0] next_state;
+
+// ─── INTERNAL CONDITION FLAGS ────────────────────────────────────────────
+wire soil_dry;
+wire soil_wet;
+wire temp_safe;
+wire ec_safe;
+wire ph_safe;
+wire nutrients_ok;
+wire safe_to_irrigate;
+
+// Condition logic (combinational)
+assign soil_dry       = (moisture    <  MOIST_LOW);
+assign soil_wet       = (moisture    >= MOIST_HIGH);
+assign temp_safe      = (temperature <  TEMP_MAX);
+assign ec_safe        = (ec          <  EC_MAX);
+assign ph_safe        = (ph          >= PH_LOW)  && (ph <= PH_HIGH);
+assign nutrients_ok   = (nitrogen    >= N_LOW)   &&
+                        (phosphorus  >= P_LOW)   &&
+                        (potassium   >= K_LOW);
+
+// All environmental conditions must be SAFE before pump activates
+assign safe_to_irrigate = temp_safe && ec_safe && ph_safe;
+
+// ─── STATE REGISTER (Sequential) ────────────────────────────────────────
+always @(posedge clk or posedge rst) begin
+    if (rst)
+        state <= IDLE;
+    else
+        state <= next_state;
+end
+
+// ─── NEXT STATE LOGIC (Combinational) ────────────────────────────────────
+always @(*) begin
+    case (state)
+        IDLE:        next_state = READ_SENSOR;
+        READ_SENSOR: next_state = PROCESS;
+        PROCESS:     next_state = OUTPUT;
+        OUTPUT:      next_state = IDLE;
+        default:     next_state = IDLE;
+    endcase
+end
+
+// ─── OUTPUT LOGIC (Multi-parameter decision) ─────────────────────────────
+always @(posedge clk or posedge rst) begin
+    if (rst) begin
+        pump       <= 1'b0;
+        led_green  <= 1'b0;
+        led_red    <= 1'b1;
+        alert      <= 1'b0;
+        tx         <= 1'b1;
+        modbus_cmd <= 8'h00;
+    end
+    else if (state == OUTPUT) begin
+
+        // UNSAFE CONDITION: Do NOT irrigate regardless of moisture
+        if (!safe_to_irrigate) begin
+            pump      <= 1'b0;
+            led_green <= 1'b0;
+            led_red   <= 1'b1;
+            alert     <= 1'b1;   // ← Simple sensor CANNOT trigger this
+        end
+
+        // SAFE + DRY: Activate pump
+        else if (soil_dry && safe_to_irrigate) begin
+            pump      <= 1'b1;
+            led_green <= 1'b1;
+            led_red   <= 1'b0;
+            alert     <= 1'b0;
+        end
+
+        // SAFE + WET: Pump OFF
+        else if (soil_wet) begin
+            pump      <= 1'b0;
+            led_green <= 1'b0;
+            led_red   <= 1'b1;
+            alert     <= 1'b0;
+        end
+
+        // Nutrient deficiency alert (no pump change, only flag)
+        if (!nutrients_ok) begin
+            alert     <= 1'b1;   // ← N/P/K — simple sensor has NO concept of this
+        end
+
+        // Modbus command: request next sensor frame (RS485)
+        modbus_cmd <= 8'h03;     // Modbus RTU function code: Read Holding Registers
+        tx         <= 1'b0;      // Initiate next read cycle
+    end
+end
+
+endmodule</textarea>
+    </div>
+  </div>
+
+  <!-- UCF -->
+  <div class="tc" id="tc-ucf">
+    <div class="chdr"><span class="ftag">constraints.ucf</span><span style="font-size:9px;color:var(--dim)">UCF Pin Map</span></div>
+    <div class="ca">
+      <div class="ln" style="padding:13px 5px;">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21<br>22<br>23<br>24</div>
+      <textarea class="ce" spellcheck="false" style="caret-color:var(--acc2);color:#7a9ab8;">## Spartan-6 XC6SLX9 Constraints
+## Project: FPGA Irrigation — Sem VI MPL
+## Tool   : Xilinx ISE 14.7
+
+## Clock (100 MHz onboard oscillator)
+NET "clk"       LOC = "V10"  | IOSTANDARD = LVCMOS33;
+TIMESPEC TS_clk = PERIOD "clk" 10 ns HIGH 50%;
+
+## Reset button
+NET "rst"       LOC = "C9"   | IOSTANDARD = LVCMOS33;
+
+## Input: Soil Moisture Sensor AO → GPIO
+NET "soil"      LOC = "T10"  | IOSTANDARD = LVCMOS33;
+NET "soil"      PULLUP;
+
+## Output: Water Pump Relay
+NET "pump"      LOC = "U16"  | IOSTANDARD = LVCMOS33;
+NET "pump"      DRIVE = 8    | SLEW = SLOW;
+
+## Output: Green LED (pump ON)
+NET "led_green" LOC = "U18"  | IOSTANDARD = LVCMOS33;
+
+## Output: Red LED (pump OFF)
+NET "led_red"   LOC = "M14"  | IOSTANDARD = LVCMOS33;
+
+## End of file</textarea>
+    </div>
+  </div>
+
+  <!-- BOARD INFO -->
+  <div class="tc" id="tc-binfo">
+    <div class="bi">
+      <div class="bsg">
+        <div class="bsh">🔲 FPGA Device</div>
+        <div class="bsr"><span class="bsk">Family</span><span class="bsv a">Spartan-6</span></div>
+        <div class="bsr"><span class="bsk">Device</span><span class="bsv a">XC6SLX9</span></div>
+        <div class="bsr"><span class="bsk">Package</span><span class="bsv">TQG144</span></div>
+        <div class="bsr"><span class="bsk">Speed Grade</span><span class="bsv">-3</span></div>
+        <div class="bsr"><span class="bsk">Logic Cells</span><span class="bsv">9,152</span></div>
+        <div class="bsr"><span class="bsk">Flip-Flops</span><span class="bsv">11,440</span></div>
+        <div class="bsr"><span class="bsk">I/O Pins</span><span class="bsv">102 (user)</span></div>
+        <div class="bsr"><span class="bsk">Clock</span><span class="bsv g">100 MHz</span></div>
+        <div class="bsr"><span class="bsk">Tool</span><span class="bsv b">Xilinx ISE 14.7</span></div>
+        <div class="bsr"><span class="bsk">Bitstream</span><span class="bsv" id="bsBit" style="color:var(--dim)">Not generated</span></div>
+      </div>
+      <div class="bsg">
+        <div class="bsh">📌 Pin Assignments</div>
+        <div class="pm">
+          <div class="pi ap"><div class="pn">clk</div><div class="pl">LOC: V10</div><div class="pf">100 MHz Osc</div></div>
+          <div class="pi"><div class="pn">rst</div><div class="pl">LOC: C9</div><div class="pf">Push Button</div></div>
+          <div class="pi ap"><div class="pn">soil</div><div class="pl">LOC: T10</div><div class="pf">Sensor AO</div></div>
+          <div class="pi ap"><div class="pn">pump</div><div class="pl">LOC: U16</div><div class="pf">Relay Drive</div></div>
+          <div class="pi ap"><div class="pn">led_green</div><div class="pl">LOC: U18</div><div class="pf">LD0 Pump ON</div></div>
+          <div class="pi ap"><div class="pn">led_red</div><div class="pl">LOC: M14</div><div class="pf">LD1 Pump OFF</div></div>
+        </div>
+      </div>
+      <div class="bsg">
+        <div class="bsh">📊 Resource Utilization</div>
+        <div class="bsr"><span class="bsk">Slice LUTs</span><span class="bsv g">12 / 5765 (0%)</span></div>
+        <div class="bsr"><span class="bsk">Flip-Flops</span><span class="bsv g">28 / 11440 (0%)</span></div>
+        <div class="bsr"><span class="bsk">IOBs</span><span class="bsv g">6 / 102 (6%)</span></div>
+        <div class="bsr"><span class="bsk">Timing</span><span class="bsv g">MET — 98.4 MHz</span></div>
+        <div class="bsr"><span class="bsk">Status</span><span class="bsv" id="bsSt" style="color:var(--dim)">Not programmed</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SENSOR -->
+  <div class="tc" id="tc-sens">
+    <div class="cb">
+      <div class="cg">
+        <div class="cl"><span class="dot" style="background:var(--acc3)"></span>Soil Moisture Sensor</div>
+        <div class="sr"><span>Moisture Level</span><span class="vc" id="mLabel">50%</span></div>
+        <input type="range" min="0" max="100" value="50" id="mSlider" oninput="onSlide(this.value)">
+        <div class="sr" style="font-size:9px;margin-top:5px;"><span>0 — Dry</span><span>100 — Wet</span></div>
+        <div class="togrow"><span>Auto-cycle test</span><button class="tog" id="autoTog" onclick="doAuto(this)"></button></div>
+      </div>
+      <div class="cg">
+        <div class="cl"><span class="dot" style="background:var(--acc2)"></span>FPGA Threshold</div>
+        <div class="sr" style="margin-bottom:6px;"><span>Dry/Wet boundary</span><span class="vc" id="tLabel">50</span></div>
+        <input type="range" min="10" max="90" value="50" id="tSlider" oninput="onThresh(this.value)">
+        <div style="font-size:9px;color:var(--dim);margin-top:7px;font-family:'JetBrains Mono',monospace">soil_s: <span id="sSig" style="color:var(--acc)">1'b0 (DRY)</span></div>
+      </div>
+      <div class="cg">
+        <div class="cl"><span class="dot" style="background:var(--pur)"></span>Component Map</div>
+        <div style="font-size:10px;color:var(--mid);line-height:2;">
+          <span style="color:var(--pur);font-family:monospace">Q1</span> NPN BC547 Transistor<br>
+          <span style="color:var(--acc3);font-family:monospace">R1,R2,R3</span> 220Ω Resistors<br>
+          <span style="color:var(--acc2);font-family:monospace">M1</span> DC Motor (Water Pump)<br>
+          <span style="color:var(--grn);font-family:monospace">D1</span> Green LED — Pump ON<br>
+          <span style="color:var(--red);font-family:monospace">D2</span> Red LED — Pump OFF
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ CENTER ═══════ -->
+<div class="center">
+  <div class="ctbar">
+    <div class="tb active">⊟</div>
+    <div class="sep"></div>
+    <span style="font-size:10px;color:var(--mid)" id="cvTitle">FPGA Automatic Irrigation — Circuit Schematic</span>
+    <div class="zlbl" id="zlbl">100%</div>
+  </div>
+
+  <!-- SCHEMATIC -->
+  <div class="cv" id="schView">
+    <svg viewBox="60 80 840 360" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <filter id="csh"><feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="rgba(0,0,0,.6)"/></filter>
+        <filter id="gC"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="gG"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="gR"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="gB"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <linearGradient id="mgr" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#22c55e"/>
+        </linearGradient>
+        <radialGradient id="motGr" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="#1e1e40"/><stop offset="100%" stop-color="#0a0a1a"/>
+        </radialGradient>
+        <linearGradient id="fpGr" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#091a12"/><stop offset="100%" stop-color="#071015"/>
+        </linearGradient>
+      </defs>
+
+      <!-- VCC rail -->
+      <line x1="90" y1="88" x2="870" y2="88" stroke="#ef4444" stroke-width="2" stroke-dasharray="10 5" opacity=".5"/>
+      <text x="96" y="82" fill="#ef4444" font-size="10" font-family="JetBrains Mono" font-weight="bold" opacity=".8">+5V VCC</text>
+      <line x1="856" y1="76" x2="856" y2="95" stroke="#ef4444" stroke-width="2"/>
+      <line x1="849" y1="79" x2="863" y2="79" stroke="#ef4444" stroke-width="1.8"/>
+
+      <!-- GND rail -->
+      <line x1="90" y1="418" x2="870" y2="418" stroke="#475569" stroke-width="1.8" opacity=".5"/>
+      <text x="97" y="435" fill="#475569" font-size="10" font-family="JetBrains Mono" opacity=".75">GND</text>
+      <line x1="108" y1="418" x2="108" y2="428" stroke="#475569" stroke-width="1.8"/>
+      <line x1="100" y1="428" x2="116" y2="428" stroke="#475569" stroke-width="2.5"/>
+      <line x1="103" y1="433" x2="113" y2="433" stroke="#475569" stroke-width="1.8"/>
+      <line x1="106" y1="438" x2="110" y2="438" stroke="#475569" stroke-width="1.4"/>
+
+      <!-- ── SOIL SENSOR ── -->
+      <rect x="80" y="152" width="122" height="152" rx="9" fill="#1a1408" stroke="#5a3f08" stroke-width="1.8" filter="url(#csh)"/>
+      <rect x="80" y="152" width="122" height="22" rx="9" ry="9" fill="#3a2808"/>
+      <rect x="80" y="163" width="122" height="11" fill="#3a2808"/>
+      <text x="141" y="168" fill="#f59e0b" font-size="9" font-family="JetBrains Mono" font-weight="bold" text-anchor="middle" letter-spacing="1.5">SOIL SENSOR</text>
+      <rect x="77" y="190" width="6" height="5" rx="1" fill="#5a3f08"/>
+      <rect x="77" y="203" width="6" height="5" rx="1" fill="#5a3f08"/>
+      <rect x="77" y="216" width="6" height="5" rx="1" fill="#5a3f08"/>
+      <rect x="199" y="203" width="6" height="5" rx="1" fill="#5a3f08"/>
+      <line x1="96" y1="187" x2="188" y2="187" stroke="#3a2808" stroke-width=".8" opacity=".6"/>
+      <line x1="96" y1="208" x2="188" y2="208" stroke="#3a2808" stroke-width=".8" opacity=".4"/>
+      <!-- Probes -->
+      <rect x="116" y="187" width="9" height="42" rx="3" fill="#c8a455"/>
+      <rect x="116" y="223" width="9" height="11" rx="1" fill="#9a7030"/>
+      <polygon points="116,234 125,234 123,244 118,244" fill="#6a4818"/>
+      <rect x="138" y="187" width="9" height="42" rx="3" fill="#c8a455"/>
+      <rect x="138" y="223" width="9" height="11" rx="1" fill="#9a7030"/>
+      <polygon points="138,234 147,234 145,244 140,244" fill="#6a4818"/>
+      <!-- Small chip on sensor -->
+      <rect x="158" y="190" width="28" height="20" rx="2" fill="#0a0808" stroke="#2a1808" stroke-width=".8"/>
+      <line x1="163" y1="190" x2="163" y2="210" stroke="#1a0808" stroke-width=".5"/>
+      <line x1="168" y1="190" x2="168" y2="210" stroke="#1a0808" stroke-width=".5"/>
+      <line x1="173" y1="190" x2="173" y2="210" stroke="#1a0808" stroke-width=".5"/>
+      <line x1="178" y1="190" x2="178" y2="210" stroke="#1a0808" stroke-width=".5"/>
+      <!-- Moisture bar -->
+      <rect x="96" y="256" width="76" height="9" rx="4.5" fill="#0f1a0a"/>
+      <rect id="smf" x="96" y="256" width="38" height="9" rx="4.5" fill="url(#mgr)"/>
+      <text id="smv" x="134" y="280" fill="#f59e0b" font-size="9" font-family="JetBrains Mono" text-anchor="middle">50%</text>
+      <text x="134" y="295" fill="#5a3f08" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">AO ● GND ● VCC</text>
+      <text x="88" y="302" fill="#3a2808" font-size="9" font-family="JetBrains Mono" font-style="italic">S1</text>
+      <!-- Sensor wires -->
+      <line x1="134" y1="152" x2="134" y2="88" stroke="#ef4444" stroke-width="1.6" opacity=".45"/>
+      <circle cx="134" cy="88" r="3.5" fill="#ef4444" opacity=".7"/>
+      <line x1="134" y1="304" x2="134" y2="418" stroke="#475569" stroke-width="1.6" opacity=".45"/>
+      <circle cx="134" cy="418" r="3.5" fill="#475569" opacity=".7"/>
+      <line x1="204" y1="206" x2="215" y2="206" stroke="#5a3f08" stroke-width="1.6"/>
+      <text x="208" y="202" fill="#f59e0b" font-size="8" font-family="JetBrains Mono" text-anchor="middle">AO</text>
+      <!-- AO to FPGA wire -->
+      <path id="wAO" class="wi" d="M215,206 L278,206"/>
+
+      <!-- ── FPGA U1 ── -->
+      <rect x="278" y="102" width="178" height="282" rx="11" fill="url(#fpGr)" stroke="#1a5a35" stroke-width="2" filter="url(#csh)"/>
+      <rect x="278" y="102" width="178" height="24" rx="11" ry="11" fill="#0d2a1a"/>
+      <rect x="278" y="115" width="178" height="11" fill="#0d2a1a"/>
+      <text x="367" y="119" fill="#00d4aa" font-size="10" font-family="JetBrains Mono" font-weight="bold" text-anchor="middle" letter-spacing="2">FPGA U1</text>
+      <text x="367" y="143" fill="#00a880" font-size="9" font-family="JetBrains Mono" text-anchor="middle">Xilinx Spartan-6</text>
+      <text x="367" y="154" fill="#006a50" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">XC6SLX9-3TQG144</text>
+      <!-- Die -->
+      <rect x="308" y="166" width="118" height="108" rx="5" fill="#060f08" stroke="#123020" stroke-width="1"/>
+      <line x1="330" y1="166" x2="330" y2="274" stroke="#123020" stroke-width=".6"/>
+      <line x1="355" y1="166" x2="355" y2="274" stroke="#123020" stroke-width=".6"/>
+      <line x1="380" y1="166" x2="380" y2="274" stroke="#123020" stroke-width=".6"/>
+      <line x1="308" y1="195" x2="426" y2="195" stroke="#123020" stroke-width=".6"/>
+      <line x1="308" y1="220" x2="426" y2="220" stroke="#123020" stroke-width=".6"/>
+      <line x1="308" y1="245" x2="426" y2="245" stroke="#123020" stroke-width=".6"/>
+      <text x="367" y="224" fill="#00d4aa" font-size="20" font-family="JetBrains Mono" text-anchor="middle" opacity=".18">⊕</text>
+      <path d="M308,166 L308,174 M308,166 L316,166" stroke="#00d4aa" stroke-width=".7" fill="none" opacity=".35"/>
+      <path d="M426,166 L426,174 M426,166 L418,166" stroke="#00d4aa" stroke-width=".7" fill="none" opacity=".35"/>
+      <path d="M308,274 L308,266 M308,274 L316,274" stroke="#00d4aa" stroke-width=".7" fill="none" opacity=".35"/>
+      <path d="M426,274 L426,266 M426,274 L418,274" stroke="#00d4aa" stroke-width=".7" fill="none" opacity=".35"/>
+      <text x="367" y="290" fill="#0ea5e9" font-size="7" font-family="JetBrains Mono" text-anchor="middle">CLK: 100 MHz</text>
+      <!-- FPGA pin marks -->
+      <rect x="273" y="138" width="8" height="5" rx="1" fill="#0d2a1a"/>
+      <rect x="273" y="200" width="8" height="5" rx="1" fill="#0d2a1a"/>
+      <rect x="273" y="338" width="8" height="5" rx="1" fill="#0d2a1a"/>
+      <rect x="453" y="185" width="8" height="5" rx="1" fill="#0d2a1a"/>
+      <rect x="453" y="300" width="8" height="5" rx="1" fill="#0d2a1a"/>
+      <rect x="453" y="328" width="8" height="5" rx="1" fill="#0d2a1a"/>
+      <!-- Pin labels -->
+      <text x="290" y="145" fill="#ef4444" font-size="7.5" font-family="JetBrains Mono">VCC</text>
+      <text x="290" y="207" fill="#94a3b8" font-size="7.5" font-family="JetBrains Mono" id="pA0">A0</text>
+      <text x="290" y="345" fill="#475569" font-size="7.5" font-family="JetBrains Mono">GND</text>
+      <text x="450" y="190" fill="#00d4aa" font-size="7.5" font-family="JetBrains Mono" text-anchor="end" id="pP7">pump</text>
+      <text x="450" y="305" fill="#22c55e" font-size="7.5" font-family="JetBrains Mono" text-anchor="end" id="pP6">led_g</text>
+      <text x="450" y="332" fill="#ef4444" font-size="7.5" font-family="JetBrains Mono" text-anchor="end" id="pP8">led_r</text>
+      <!-- Pin stubs -->
+      <line x1="268" y1="142" x2="280" y2="142" stroke="#ef4444" stroke-width="1.5"/>
+      <line id="sA0" x1="268" y1="203" x2="280" y2="203" stroke="#2a3a50" stroke-width="1.8"/>
+      <line x1="268" y1="342" x2="280" y2="342" stroke="#475569" stroke-width="1.5"/>
+      <line id="sP7" x1="456" y1="188" x2="468" y2="188" stroke="#2a3a50" stroke-width="1.8"/>
+      <line id="sP6" x1="456" y1="303" x2="468" y2="303" stroke="#2a3a50" stroke-width="1.8"/>
+      <line id="sP8" x1="456" y1="330" x2="468" y2="330" stroke="#2a3a50" stroke-width="1.8"/>
+      <!-- FPGA status -->
+      <text id="fpgaSt" x="367" y="356" fill="#006a50" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">NOT PROGRAMMED</text>
+      <text x="284" y="375" fill="#1a4a2a" font-size="7.5" font-family="JetBrains Mono" font-style="italic">U1 — Spartan-6 Controller</text>
+      <!-- FPGA power wires -->
+      <line x1="268" y1="142" x2="268" y2="88" stroke="#ef4444" stroke-width="1.5" opacity=".45"/>
+      <circle cx="268" cy="88" r="3.5" fill="#ef4444" opacity=".7"/>
+      <line x1="268" y1="342" x2="268" y2="418" stroke="#475569" stroke-width="1.5" opacity=".45"/>
+      <circle cx="268" cy="418" r="3.5" fill="#475569" opacity=".7"/>
+
+      <!-- R1 pump resistor -->
+      <path id="wR1" class="wi" d="M468,188 L508,188 L512,180 L520,196 L528,180 L536,196 L544,180 L548,188 L600,188"/>
+      <text x="528" y="174" fill="#5a5a8a" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">R1 220Ω</text>
+
+      <!-- TRANSISTOR Q1 -->
+      <circle cx="642" cy="202" r="40" fill="#110d1e" stroke="#2a1a3a" stroke-width="1.8" filter="url(#csh)"/>
+      <circle cx="642" cy="202" r="33" fill="none" stroke="#1a1028" stroke-width=".7"/>
+      <line id="wBI" x1="600" y1="188" x2="622" y2="188" stroke="#4a4a7a" stroke-width="1.8"/>
+      <line id="qBL" x1="622" y1="165" x2="622" y2="235" stroke="#4a4a7a" stroke-width="2.5"/>
+      <line id="wCL" x1="622" y1="173" x2="664" y2="140" stroke="#4a4a7a" stroke-width="1.8"/>
+      <line id="wEM" x1="622" y1="218" x2="663" y2="252" stroke="#4a4a7a" stroke-width="1.8"/>
+      <polygon id="qArr" points="653,242 644,241 650,233" fill="#4a4a7a"/>
+      <text x="646" y="202" fill="#7a5aaa" font-size="8" font-family="JetBrains Mono" font-weight="bold" text-anchor="middle">NPN</text>
+      <text x="646" y="213" fill="#4a3a6a" font-size="7" font-family="JetBrains Mono" text-anchor="middle">BC547</text>
+      <text x="608" y="158" fill="#5a5a7a" font-size="8" font-family="JetBrains Mono">C</text>
+      <text x="605" y="194" fill="#5a5a7a" font-size="8" font-family="JetBrains Mono">B</text>
+      <text x="608" y="244" fill="#5a5a7a" font-size="8" font-family="JetBrains Mono">E</text>
+      <text x="604" y="260" fill="#2a1a4a" font-size="8.5" font-family="JetBrains Mono" font-style="italic">Q1</text>
+      <path id="wCM" class="wi" d="M664,140 L664,95 L712,95"/>
+      <path id="wEG" class="wi" d="M663,252 L663,418"/>
+      <circle cx="663" cy="418" r="3.5" fill="#475569" opacity=".7"/>
+
+      <!-- MOTOR M1 -->
+      <circle cx="764" cy="95" r="48" fill="url(#motGr)" stroke="#252550" stroke-width="2" filter="url(#csh)"/>
+      <circle cx="764" cy="95" r="40" fill="none" stroke="#1a1a40" stroke-width="1"/>
+      <circle cx="764" cy="95" r="9" fill="#0d0d25" stroke="#2a2a4a" stroke-width="1"/>
+      <g id="mRotor" transform="rotate(0 764 95)">
+        <line x1="764" y1="57" x2="764" y2="72" stroke="#2a2a55" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="788" y1="71" x2="776" y2="83" stroke="#2a2a55" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="800" y1="95" x2="785" y2="95" stroke="#2a2a55" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="788" y1="119" x2="776" y2="107" stroke="#2a2a55" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="764" y1="133" x2="764" y2="118" stroke="#2a2a55" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="740" y1="119" x2="752" y2="107" stroke="#2a2a55" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="728" y1="95" x2="743" y2="95" stroke="#2a2a55" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="740" y1="71" x2="752" y2="83" stroke="#2a2a55" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <text x="764" y="90" fill="#3a3a7a" font-size="14" font-family="JetBrains Mono" font-weight="bold" text-anchor="middle">M</text>
+      <text x="764" y="102" fill="#2a2a5a" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">PUMP</text>
+      <text x="712" y="92" fill="#5a5a7a" font-size="9" font-family="JetBrains Mono" text-anchor="end">−</text>
+      <line x1="811" y1="95" x2="824" y2="95" stroke="#ef4444" stroke-width="1.8"/>
+      <text x="826" y="99" fill="#ef4444" font-size="9" font-family="JetBrains Mono">+</text>
+      <text id="mSt" x="764" y="158" fill="#2a2a50" font-size="10" font-family="JetBrains Mono" font-weight="bold" text-anchor="middle">OFF</text>
+      <text x="724" y="152" fill="#15154a" font-size="7.5" font-family="JetBrains Mono" font-style="italic">M1 — DC Motor</text>
+      <path id="wMV" class="wi" d="M822,95 L852,95 L852,88"/>
+      <circle cx="852" cy="88" r="3.5" fill="#ef4444" opacity=".7"/>
+
+      <!-- R2 Green LED resistor -->
+      <path id="wR2" class="wi" d="M468,303 L500,303 L504,295 L512,311 L520,295 L528,311 L536,295 L540,303 L568,303"/>
+      <text x="518" y="290" fill="#2a6a2a" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">R2 220Ω</text>
+      <line id="wR2L" x1="568" y1="303" x2="588" y2="303" stroke="#2a5a2a" stroke-width="1.8"/>
+
+      <!-- GREEN LED D1 -->
+      <polygon id="ldGb" points="588,284 588,322 622,303" fill="#0a1e0a" stroke="#1a4a1a" stroke-width="1.8"/>
+      <line id="ldGbr" x1="622" y1="282" x2="622" y2="324" stroke="#1a4a1a" stroke-width="3"/>
+      <circle id="ldGgl" cx="605" cy="303" r="22" fill="rgba(34,197,94,0)" filter="url(#gG)" opacity="0"/>
+      <g id="ldGar" opacity=".1">
+        <line x1="610" y1="287" x2="624" y2="268" stroke="#22c55e" stroke-width="1.5"/>
+        <polygon points="624,268 617,272 622,279" fill="#22c55e"/>
+        <line x1="600" y1="285" x2="614" y2="266" stroke="#22c55e" stroke-width="1.5"/>
+        <polygon points="614,266 607,270 612,277" fill="#22c55e"/>
+      </g>
+      <text x="586" y="280" fill="#1a5a1a" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">A</text>
+      <text x="624" y="280" fill="#1a5a1a" font-size="7.5" font-family="JetBrains Mono">K</text>
+      <text x="605" y="340" fill="#0d3a0d" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle" font-style="italic">D1 GREEN</text>
+      <path id="wGND1" class="wi" d="M622,303 L678,303 L678,418"/>
+      <circle cx="678" cy="418" r="3.5" fill="#475569" opacity=".7"/>
+
+      <!-- R3 Red LED resistor -->
+      <path id="wR3" class="wi" d="M468,330 L498,330 L502,322 L510,338 L518,322 L526,338 L534,322 L538,330 L558,330"/>
+      <text x="513" y="317" fill="#6a2a2a" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">R3 220Ω</text>
+      <line id="wR3L" x1="558" y1="330" x2="578" y2="330" stroke="#5a1a1a" stroke-width="1.8"/>
+
+      <!-- RED LED D2 -->
+      <polygon id="ldRb" points="578,311 578,349 612,330" fill="#1e0808" stroke="#4a1a1a" stroke-width="1.8"/>
+      <line id="ldRbr" x1="612" y1="309" x2="612" y2="351" stroke="#4a1a1a" stroke-width="3"/>
+      <circle id="ldRgl" cx="595" cy="330" r="22" fill="rgba(239,68,68,0)" filter="url(#gR)" opacity="0"/>
+      <text x="576" y="307" fill="#5a1a1a" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">A</text>
+      <text x="614" y="307" fill="#5a1a1a" font-size="7.5" font-family="JetBrains Mono">K</text>
+      <text x="595" y="368" fill="#4a1a1a" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle" font-style="italic">D2 RED</text>
+      <path id="wGND2" class="wi" d="M612,330 L700,330 L700,418"/>
+      <circle cx="700" cy="418" r="3.5" fill="#475569" opacity=".7"/>
+
+      <!-- TITLE BLOCK -->
+      <rect x="82" y="383" width="175" height="74" rx="5" fill="#0a0f1a" stroke="#1e2d45" stroke-width="1"/>
+      <line x1="82" y1="399" x2="257" y2="399" stroke="#1e2d45" stroke-width=".8"/>
+      <line x1="82" y1="416" x2="257" y2="416" stroke="#1e2d45" stroke-width=".8"/>
+      <line x1="82" y1="433" x2="257" y2="433" stroke="#1e2d45" stroke-width=".8"/>
+      <text x="169" y="394" fill="#64748b" font-size="9" font-family="JetBrains Mono" text-anchor="middle" letter-spacing="1">SCHEMATIC</text>
+      <text x="169" y="412" fill="#94a3b8" font-size="8" font-family="Exo 2" text-anchor="middle" font-weight="bold">FPGA Irrigation System</text>
+      <text x="169" y="428" fill="#64748b" font-size="7" font-family="JetBrains Mono" text-anchor="middle">Spartan-6 XC6SLX9-3TQG144</text>
+      <text x="169" y="444" fill="#4a5568" font-size="7" font-family="JetBrains Mono" text-anchor="middle">EXTC MPL — Sem VI 2026</text>
+
+      <!-- LEGEND -->
+      <rect x="718" y="383" width="160" height="74" rx="5" fill="#0a0f1a" stroke="#1e2d45" stroke-width="1"/>
+      <text x="798" y="398" fill="#64748b" font-size="9" font-family="JetBrains Mono" text-anchor="middle" letter-spacing="1">LEGEND</text>
+      <line x1="718" y1="401" x2="878" y2="401" stroke="#1e2d45" stroke-width=".8"/>
+      <line x1="727" y1="414" x2="754" y2="414" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 3"/>
+      <text x="760" y="418" fill="#64748b" font-size="7.5" font-family="JetBrains Mono">VCC +5V</text>
+      <line x1="727" y1="428" x2="754" y2="428" stroke="#475569" stroke-width="1.8"/>
+      <text x="760" y="432" fill="#64748b" font-size="7.5" font-family="JetBrains Mono">GND</text>
+      <line x1="727" y1="442" x2="754" y2="442" stroke="#00d4aa" stroke-width="2" stroke-dasharray="6 3"/>
+      <text x="760" y="446" fill="#64748b" font-size="7.5" font-family="JetBrains Mono">Signal Active</text>
+    </svg>
+  </div>
+
+  <!-- FPGA BOARD VIEW -->
+  <div class="bv" id="brdView">
+    <svg viewBox="0 0 760 440" xmlns="http://www.w3.org/2000/svg"
+      style="display:block;min-width:640px;max-width:760px;min-height:340px;margin:16px auto;">
+      <defs>
+        <filter id="bsh" x="-15%" y="-15%" width="130%" height="130%">
+          <feDropShadow dx="0" dy="3" stdDeviation="9" flood-color="rgba(0,0,0,.85)"/>
+        </filter>
+        <filter id="bgC" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="bgR" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="bgB" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="pcbg" cx="50%" cy="45%" r="70%">
+          <stop offset="0%" stop-color="#145a32"/>
+          <stop offset="55%" stop-color="#0a3d22"/>
+          <stop offset="100%" stop-color="#041508"/>
+        </radialGradient>
+        <linearGradient id="pinG" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#cccccc"/>
+          <stop offset="50%" stop-color="#eeeeee"/>
+          <stop offset="100%" stop-color="#aaaaaa"/>
+        </linearGradient>
+      </defs>
+
+      <!-- ═ PCB BODY ═ -->
+      <rect x="18" y="16" width="724" height="408" rx="12" fill="url(#pcbg)"
+        stroke="#1e7a3e" stroke-width="2.5" filter="url(#bsh)"/>
+      <!-- Silkscreen border -->
+      <rect x="24" y="22" width="712" height="396" rx="9" fill="none" stroke="#0d4a20" stroke-width="1" opacity=".4"/>
+
+      <!-- Grid (subtle copper traces look) -->
+      <g stroke="#0d4520" stroke-width=".35" opacity=".3">
+        <line x1="18" y1="76" x2="742" y2="76"/>
+        <line x1="18" y1="136" x2="742" y2="136"/>
+        <line x1="18" y1="196" x2="742" y2="196"/>
+        <line x1="18" y1="256" x2="742" y2="256"/>
+        <line x1="18" y1="316" x2="742" y2="316"/>
+        <line x1="18" y1="376" x2="742" y2="376"/>
+        <line x1="96" y1="16" x2="96" y2="424"/>
+        <line x1="180" y1="16" x2="180" y2="424"/>
+        <line x1="264" y1="16" x2="264" y2="424"/>
+        <line x1="348" y1="16" x2="348" y2="424"/>
+        <line x1="432" y1="16" x2="432" y2="424"/>
+        <line x1="516" y1="16" x2="516" y2="424"/>
+        <line x1="600" y1="16" x2="600" y2="424"/>
+        <line x1="684" y1="16" x2="684" y2="424"/>
+      </g>
+
+      <!-- Mounting holes -->
+      <circle cx="42" cy="40" r="8" fill="#021008" stroke="#0a3018" stroke-width="1.8"/>
+      <circle cx="720" cy="40" r="8" fill="#021008" stroke="#0a3018" stroke-width="1.8"/>
+      <circle cx="42" cy="400" r="8" fill="#021008" stroke="#0a3018" stroke-width="1.8"/>
+      <circle cx="720" cy="400" r="8" fill="#021008" stroke="#0a3018" stroke-width="1.8"/>
+      <g stroke="#0d3a18" stroke-width=".8" fill="none" opacity=".35">
+        <circle cx="42" cy="40" r="12"/>
+        <circle cx="720" cy="40" r="12"/>
+        <circle cx="42" cy="400" r="12"/>
+        <circle cx="720" cy="400" r="12"/>
+      </g>
+
+      <!-- Board title silkscreen -->
+      <text x="380" y="42" fill="#2faa55" font-size="11" font-family="JetBrains Mono"
+        font-weight="bold" text-anchor="middle" letter-spacing="2" opacity=".85">SPARTAN-6 FPGA DEVELOPMENT BOARD</text>
+      <text x="380" y="56" fill="#1a6a30" font-size="7.5" font-family="JetBrains Mono"
+        text-anchor="middle" opacity=".7">Xilinx XC6SLX9-3TQG144 | 9K Logic Cells | 100 MHz Clock</text>
+
+      <!-- ═ MAIN FPGA CHIP ═ -->
+      <rect x="240" y="120" width="198" height="198" rx="7" fill="#0b0b0b" stroke="#222" stroke-width="2"/>
+      <!-- Top pins -->
+      <g fill="url(#pinG)" opacity=".8">
+        <rect x="260" y="108" width="5" height="14" rx="1"/>
+        <rect x="274" y="108" width="5" height="14" rx="1"/>
+        <rect x="288" y="108" width="5" height="14" rx="1"/>
+        <rect x="302" y="108" width="5" height="14" rx="1"/>
+        <rect x="316" y="108" width="5" height="14" rx="1"/>
+        <rect x="330" y="108" width="5" height="14" rx="1"/>
+        <rect x="344" y="108" width="5" height="14" rx="1"/>
+        <rect x="358" y="108" width="5" height="14" rx="1"/>
+        <rect x="372" y="108" width="5" height="14" rx="1"/>
+        <rect x="386" y="108" width="5" height="14" rx="1"/>
+        <rect x="400" y="108" width="5" height="14" rx="1"/>
+        <rect x="414" y="108" width="5" height="14" rx="1"/>
+      </g>
+      <!-- Bottom pins -->
+      <g fill="url(#pinG)" opacity=".8">
+        <rect x="260" y="318" width="5" height="14" rx="1"/>
+        <rect x="274" y="318" width="5" height="14" rx="1"/>
+        <rect x="288" y="318" width="5" height="14" rx="1"/>
+        <rect x="302" y="318" width="5" height="14" rx="1"/>
+        <rect x="316" y="318" width="5" height="14" rx="1"/>
+        <rect x="330" y="318" width="5" height="14" rx="1"/>
+        <rect x="344" y="318" width="5" height="14" rx="1"/>
+        <rect x="358" y="318" width="5" height="14" rx="1"/>
+        <rect x="372" y="318" width="5" height="14" rx="1"/>
+        <rect x="386" y="318" width="5" height="14" rx="1"/>
+        <rect x="400" y="318" width="5" height="14" rx="1"/>
+        <rect x="414" y="318" width="5" height="14" rx="1"/>
+      </g>
+      <!-- Left pins -->
+      <g fill="url(#pinG)" opacity=".8">
+        <rect x="226" y="138" width="16" height="5" rx="1"/>
+        <rect x="226" y="152" width="16" height="5" rx="1"/>
+        <rect x="226" y="166" width="16" height="5" rx="1"/>
+        <rect x="226" y="180" width="16" height="5" rx="1"/>
+        <rect x="226" y="194" width="16" height="5" rx="1"/>
+        <rect x="226" y="208" width="16" height="5" rx="1"/>
+        <rect x="226" y="222" width="16" height="5" rx="1"/>
+        <rect x="226" y="236" width="16" height="5" rx="1"/>
+        <rect x="226" y="250" width="16" height="5" rx="1"/>
+        <rect x="226" y="264" width="16" height="5" rx="1"/>
+        <rect x="226" y="278" width="16" height="5" rx="1"/>
+        <rect x="226" y="292" width="16" height="5" rx="1"/>
+      </g>
+      <!-- Right pins -->
+      <g fill="url(#pinG)" opacity=".8">
+        <rect x="436" y="138" width="16" height="5" rx="1"/>
+        <rect x="436" y="152" width="16" height="5" rx="1"/>
+        <rect x="436" y="166" width="16" height="5" rx="1"/>
+        <rect x="436" y="180" width="16" height="5" rx="1"/>
+        <rect x="436" y="194" width="16" height="5" rx="1"/>
+        <rect x="436" y="208" width="16" height="5" rx="1"/>
+        <rect x="436" y="222" width="16" height="5" rx="1"/>
+        <rect x="436" y="236" width="16" height="5" rx="1"/>
+        <rect x="436" y="250" width="16" height="5" rx="1"/>
+        <rect x="436" y="264" width="16" height="5" rx="1"/>
+        <rect x="436" y="278" width="16" height="5" rx="1"/>
+        <rect x="436" y="292" width="16" height="5" rx="1"/>
+      </g>
+
+      <!-- Die surface -->
+      <rect x="252" y="132" width="174" height="174" rx="4" fill="#060606"/>
+      <g stroke="#111" stroke-width=".8">
+        <line x1="275" y1="132" x2="275" y2="306"/>
+        <line x1="310" y1="132" x2="310" y2="306"/>
+        <line x1="345" y1="132" x2="345" y2="306"/>
+        <line x1="380" y1="132" x2="380" y2="306"/>
+        <line x1="415" y1="132" x2="415" y2="306"/>
+        <line x1="252" y1="165" x2="426" y2="165"/>
+        <line x1="252" y1="200" x2="426" y2="200"/>
+        <line x1="252" y1="235" x2="426" y2="235"/>
+        <line x1="252" y1="270" x2="426" y2="270"/>
+      </g>
+      <!-- Chip brand center -->
+      <rect x="292" y="178" width="94" height="82" rx="3" fill="#090910" stroke="#101018" stroke-width=".8"/>
+      <text x="339" y="212" fill="#191940" font-size="28" font-family="sans-serif" font-weight="900" text-anchor="middle" opacity=".5">X</text>
+      <text x="339" y="228" fill="#0e0e2a" font-size="7" font-family="JetBrains Mono" text-anchor="middle" letter-spacing="1.5">XILINX</text>
+      <text x="339" y="240" fill="#0a0a1e" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">SPARTAN-6</text>
+      <text x="339" y="251" fill="#080816" font-size="6" font-family="JetBrains Mono" text-anchor="middle">XC6SLX9</text>
+      <!-- Pin 1 chamfer -->
+      <polygon points="240,120 255,120 240,135" fill="#1a1a1a"/>
+      <text x="258" y="133" fill="#1a5a28" font-size="6.5" font-family="JetBrains Mono" opacity=".7">▲1</text>
+      <text x="339" y="325" fill="#0a5020" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle">XC6SLX9-3TQG144</text>
+
+      <!-- ═ CRYSTAL OSC ═ -->
+      <rect x="74" y="130" width="62" height="32" rx="5" fill="#1c1c10" stroke="#4a4a1a" stroke-width="1.8"/>
+      <rect x="78" y="134" width="54" height="10" rx="2" fill="#2a2a18" opacity=".5"/>
+      <rect x="63" y="139" width="13" height="6" rx="1" fill="#999" opacity=".8"/>
+      <rect x="136" y="139" width="13" height="6" rx="1" fill="#999" opacity=".8"/>
+      <text x="105" y="147" fill="#9a9a38" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">XTAL</text>
+      <text x="105" y="157" fill="#6a6a28" font-size="7" font-family="JetBrains Mono" text-anchor="middle">100 MHz</text>
+      <text x="105" y="124" fill="#3a4a28" font-size="7" font-family="JetBrains Mono" text-anchor="middle">CLK OSC</text>
+      <path d="M149,143 L242,193" stroke="#2a4a20" stroke-width="1.2" stroke-dasharray="4 3" opacity=".35"/>
+
+      <!-- ═ USB/JTAG PORT ═ -->
+      <rect x="60" y="185" width="56" height="42" rx="4" fill="#16161e" stroke="#303050" stroke-width="2"/>
+      <rect x="64" y="190" width="48" height="28" rx="2" fill="#0c0c14"/>
+      <g fill="#282848" opacity=".9">
+        <rect x="67" y="194" width="5" height="4" rx="1"/>
+        <rect x="75" y="194" width="5" height="4" rx="1"/>
+        <rect x="83" y="194" width="5" height="4" rx="1"/>
+        <rect x="91" y="194" width="5" height="4" rx="1"/>
+        <rect x="99" y="194" width="5" height="4" rx="1"/>
+      </g>
+      <text x="88" y="180" fill="#4a4a7a" font-size="7" font-family="JetBrains Mono" text-anchor="middle">JTAG/USB</text>
+      <text x="88" y="238" fill="#2a2a5a" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">PROGRAMMER</text>
+      <!-- JTAG prog LED -->
+      <circle id="bJled" cx="88" cy="256" r="6" fill="#0a0a18" stroke="#1a1a28" stroke-width="1.2"/>
+      <text x="88" y="270" fill="#1a1a38" font-size="6" font-family="JetBrains Mono" text-anchor="middle">PROG LED</text>
+
+      <!-- ═ POWER LED (always green) ═ -->
+      <circle cx="88" cy="298" r="8" fill="#00bb20" stroke="#00ee40" stroke-width="1.5" filter="url(#bgC)"/>
+      <text x="88" y="315" fill="#1a5a1a" font-size="7" font-family="JetBrains Mono" text-anchor="middle">PWR</text>
+
+      <!-- ═ BOARD LEDs (LD0–LD3) ═ -->
+      <text x="636" y="87" fill="#2faa55" font-size="9" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold" letter-spacing="1">BOARD LEDs</text>
+
+      <!-- LD0 Green: pump ON -->
+      <circle id="bLD0" cx="560" cy="110" r="14" fill="#051005" stroke="#0d2a0d" stroke-width="2"/>
+      <text x="560" y="131" fill="#0d3a0d" font-size="8" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">LD0</text>
+      <text x="560" y="142" fill="#0a2a0a" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">PUMP ON</text>
+
+      <!-- LD1 Red: pump OFF -->
+      <circle id="bLD1" cx="604" cy="110" r="14" fill="#150505" stroke="#2a0d0d" stroke-width="2"/>
+      <text x="604" y="131" fill="#3a0d0d" font-size="8" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">LD1</text>
+      <text x="604" y="142" fill="#280808" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">PUMP OFF</text>
+
+      <!-- LD2 Blue: clock running -->
+      <circle id="bLD2" cx="648" cy="110" r="14" fill="#04040f" stroke="#0c0c2a" stroke-width="2"/>
+      <text x="648" y="131" fill="#0c0c3a" font-size="8" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">LD2</text>
+      <text x="648" y="142" fill="#080820" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">CLK OK</text>
+
+      <!-- LD3 Yellow: bitstream loaded -->
+      <circle id="bLD3" cx="692" cy="110" r="14" fill="#0e0d02" stroke="#2a2804" stroke-width="2"/>
+      <text x="692" y="131" fill="#3a3808" font-size="8" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">LD3</text>
+      <text x="692" y="142" fill="#282606" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">DONE</text>
+
+      <!-- ═ SWITCHES ═ -->
+      <text x="130" y="365" fill="#2faa55" font-size="8" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">SWITCHES</text>
+
+      <!-- SW0 clickable soil toggle -->
+      <rect id="bSW0" x="64" y="373" width="48" height="22" rx="5"
+        fill="#280808" stroke="#5a1010" stroke-width="2" style="cursor:pointer" onclick="boardSwToggle()"/>
+      <text id="bSW0t" x="88" y="388" fill="#aa2020" font-size="9"
+        font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">OFF</text>
+      <text x="88" y="408" fill="#4a1010" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">SW0 soil ← click</text>
+
+      <!-- SW1 unused -->
+      <rect x="120" y="373" width="48" height="22" rx="5" fill="#080820" stroke="#10104a" stroke-width="2"/>
+      <text x="144" y="388" fill="#20205a" font-size="9" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">OFF</text>
+      <text x="144" y="408" fill="#10103a" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">SW1</text>
+
+      <!-- RST button -->
+      <circle cx="206" cy="384" r="13" fill="#280808" stroke="#7a1010" stroke-width="2" style="cursor:pointer"/>
+      <text x="206" y="387" fill="#aa2020" font-size="7" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">RST</text>
+      <text x="206" y="408" fill="#4a1010" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">BTN0</text>
+
+      <!-- ═ GPIO HEADER ═ -->
+      <text x="592" y="363" fill="#2faa55" font-size="8" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">SENSOR I/O HEADER</text>
+      <rect x="474" y="373" width="236" height="26" rx="3" fill="#060e06" stroke="#1a3a1a" stroke-width="1.8"/>
+      <g>
+        <circle cx="492" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="512" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="532" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="552" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="572" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="592" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="612" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="632" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="652" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="672" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+        <circle cx="692" cy="386" r="4.5" fill="#0a1e0a" stroke="#1a5a1a" stroke-width="1.2"/>
+      </g>
+      <g fill="#1a5a20" font-size="5.5" font-family="JetBrains Mono" text-anchor="middle">
+        <text x="492" y="408">soil</text><text x="512" y="408">pump</text>
+        <text x="532" y="408">led_g</text><text x="552" y="408">led_r</text>
+        <text x="572" y="408">GND</text><text x="592" y="408">VCC</text>
+        <text x="612" y="408">CLK</text><text x="632" y="408">RST</text>
+      </g>
+      <g fill="#0a3a10" font-size="5" font-family="JetBrains Mono" text-anchor="middle">
+        <text x="492" y="416">T10</text><text x="512" y="416">U16</text>
+        <text x="532" y="416">U18</text><text x="552" y="416">M14</text>
+      </g>
+
+      <!-- ═ PMOD CONNECTOR ═ -->
+      <text x="630" y="168" fill="#2aaa55" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle">PMOD JA</text>
+      <rect x="562" y="174" width="136" height="22" rx="3" fill="#060e06" stroke="#1a3a1a" stroke-width="1.5"/>
+      <g fill="#1a5a28">
+        <circle cx="578" cy="185" r="4"/><circle cx="596" cy="185" r="4"/>
+        <circle cx="614" cy="185" r="4"/><circle cx="632" cy="185" r="4"/>
+        <circle cx="650" cy="185" r="4"/><circle cx="668" cy="185" r="4"/>
+        <circle cx="686" cy="185" r="4"/>
+      </g>
+      <text x="630" y="206" fill="#0a2a12" font-size="6" font-family="JetBrains Mono" text-anchor="middle">GPIO Expansion</text>
+
+      <!-- ═ POWER REGULATOR ═ -->
+      <rect x="562" y="230" width="60" height="30" rx="3" fill="#101010" stroke="#303030" stroke-width="1.5"/>
+      <text x="592" y="246" fill="#3a3a3a" font-size="6.5" font-family="JetBrains Mono" text-anchor="middle">LDO REG</text>
+      <text x="592" y="256" fill="#2a2a2a" font-size="6" font-family="JetBrains Mono" text-anchor="middle">3.3V / 1.0V</text>
+      <text x="592" y="222" fill="#3a4a2a" font-size="7" font-family="JetBrains Mono" text-anchor="middle">POWER REG</text>
+
+      <!-- ═ DECOUPLING CAPS ═ -->
+      <g fill="#1a1a1a" stroke="#2a2a2a" stroke-width=".8">
+        <rect x="160" y="136" width="12" height="6" rx="1"/>
+        <rect x="178" y="136" width="12" height="6" rx="1"/>
+        <rect x="460" y="136" width="12" height="6" rx="1"/>
+        <rect x="478" y="136" width="12" height="6" rx="1"/>
+        <rect x="160" y="310" width="12" height="6" rx="1"/>
+        <rect x="178" y="310" width="12" height="6" rx="1"/>
+      </g>
+      <text x="173" y="130" fill="#1a3a1a" font-size="5.5" font-family="JetBrains Mono" text-anchor="middle">CAPS</text>
+
+      <!-- ═ BOARD STATUS BOX ═ -->
+      <rect x="62" y="335" width="148" height="56" rx="6" fill="#071408" stroke="#1a3a1a" stroke-width="1.5"/>
+      <text x="136" y="350" fill="#2aaa55" font-size="7.5" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold" letter-spacing="1">BOARD STATUS</text>
+      <line x1="62" y1="354" x2="210" y2="354" stroke="#1a3a1a" stroke-width=".8"/>
+      <text id="bBst" x="136" y="370" fill="#2a5a30" font-size="8" font-family="JetBrains Mono" text-anchor="middle" font-weight="bold">NOT PROGRAMMED</text>
+      <text id="bSst" x="136" y="383" fill="#1a4a20" font-size="7" font-family="JetBrains Mono" text-anchor="middle">soil = 1'b1 (WET)</text>
+
+      <!-- Signal trace lines (animated when active) -->
+      <path id="bTsoil" d="M492,373 L492,340 L242,222" stroke="#2a3a20" stroke-width="1.2" fill="none" stroke-dasharray="5 3" opacity=".3"/>
+      <path id="bTpump" d="M512,373 L512,338 L452,208" stroke="#1a3a10" stroke-width="1.2" fill="none" stroke-dasharray="5 3" opacity=".25"/>
+      <path id="bTld0"  d="M560,124 L452,191" stroke="#1a3a10" stroke-width="1.2" fill="none" stroke-dasharray="5 3" opacity=".2"/>
+      <path id="bTld1"  d="M604,124 L452,208" stroke="#2a1010" stroke-width="1.2" fill="none" stroke-dasharray="5 3" opacity=".2"/>
+
+      <!-- VCC/GND power traces -->
+      <line x1="18" y1="70" x2="742" y2="70" stroke="#5a0f0f" stroke-width="2" opacity=".18"/>
+      <line x1="18" y1="418" x2="742" y2="418" stroke="#1a3a1a" stroke-width="2" opacity=".18"/>
+      <text x="680" y="66" fill="#5a1a1a" font-size="6.5" font-family="JetBrains Mono" opacity=".45">VCC +3.3V</text>
+      <text x="680" y="415" fill="#1a3a1a" font-size="6.5" font-family="JetBrains Mono" opacity=".45">GND</text>
+    </svg>
+  </div>
+</div><!-- end center -->
+
+<!-- ═══════ RIGHT OUTPUT ═══════ -->
+<div class="out">
+  <div class="oh"><span>◈</span> Output</div>
+  <div class="wa2">
+    <div class="wlbl"><span>Waveform</span><span style="color:var(--acc);font-size:9px" id="wtime">t=0</span></div>
+    <canvas id="wc" width="196" height="76"></canvas>
+  </div>
+  <div class="sa">
+    <div class="srow">
+      <div class="sname"><div class="sind" style="background:var(--acc3)"></div>soil</div>
+      <div class="sv lo" id="sv0">1'b1</div>
+    </div>
+    <div class="srow">
+      <div class="sname"><div class="sind" style="background:var(--acc)"></div>pump</div>
+      <div class="sv lo" id="sv1">1'b0</div>
+    </div>
+    <div class="srow">
+      <div class="sname"><div class="sind" style="background:var(--grn)"></div>led_green</div>
+      <div class="sv lo" id="sv2">1'b0</div>
+    </div>
+    <div class="srow">
+      <div class="sname"><div class="sind" style="background:var(--red)"></div>led_red</div>
+      <div class="sv hi" id="sv3">1'b1</div>
+    </div>
+  </div>
+  <div class="oh" style="border-top:1px solid var(--border)"><span>▸</span> Console</div>
+  <div class="la" id="log">
+    <div class="le info"><span class="lts">[0ns]</span><span>Spartan-6 simulator ready.</span></div>
+    <div class="le"><span class="lts">[--]</span><span>Program FPGA then Run.</span></div>
+  </div>
+</div>
+</div><!-- end main -->
+
+<!-- STATUS BAR -->
+<div class="sb">
+  <div class="si"><div class="sd" id="sdot"></div><span id="stxt">Idle</span></div>
+  <div class="si">Verilog HDL · Xilinx ISE 14.7</div>
+  <div class="si" id="stime">t = 0 ns</div>
+  <div class="si" id="sbrd">Board: NOT PROGRAMMED</div>
+  <div class="si" style="margin-left:auto">FPGA Irrigation Simulator v3.0 — Spartan-6</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════ SYNTHESIS MODAL ═══════ -->
+<div class="mo" id="mo">
+  <div class="mbox">
+    <div class="mhdr">
+      <h2>⚡ Xilinx ISE 14.7 — Program FPGA Device</h2>
+      <button class="mcl" onclick="closeSynth()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="mprog"><div class="mpf" id="mpf"></div></div>
+      <div class="mstep" id="ms0"><div class="mico">📄</div><div style="flex:1"><div class="mn">Parse Verilog HDL</div><div class="md" id="md0">irrigation_system.v</div></div><div class="mt" id="mt0">--</div></div>
+      <div class="mstep" id="ms1"><div class="mico">🔧</div><div style="flex:1"><div class="mn">Synthesis (XST)</div><div class="md" id="md1">RTL → LUT primitives</div></div><div class="mt" id="mt1">--</div></div>
+      <div class="mstep" id="ms2"><div class="mico">🗺️</div><div style="flex:1"><div class="mn">Translate &amp; Map</div><div class="md" id="md2">LUTs → Spartan-6 slices</div></div><div class="mt" id="mt2">--</div></div>
+      <div class="mstep" id="ms3"><div class="mico">📐</div><div style="flex:1"><div class="mn">Place &amp; Route (PAR)</div><div class="md" id="md3">Route 6 I/O, 12 LUTs</div></div><div class="mt" id="mt3">--</div></div>
+      <div class="mstep" id="ms4"><div class="mico">💾</div><div style="flex:1"><div class="mn">Generate Bitstream</div><div class="md" id="md4">irrigation_system.bit</div></div><div class="mt" id="mt4">--</div></div>
+      <div class="mstep" id="ms5"><div class="mico">📡</div><div style="flex:1"><div class="mn">Program Device (JTAG)</div><div class="md" id="md5">Downloading to XC6SLX9...</div></div><div class="mt" id="mt5">--</div></div>
+      <div class="mlog" id="mlog"><span style="color:#1a4a1a">&gt; Xilinx ISE 14.7 iMPACT Console</span><br><span style="color:#1a4a1a">&gt; Target: XC6SLX9-3TQG144</span><br><span style="color:#0a3a0a">&gt; Ready. Press Build &amp; Program...</span></div>
+    </div>
+    <div class="mft">
+      <span class="mst" id="mstxt">Ready to program</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ol" onclick="closeSynth()" style="font-size:11px;">Cancel</button>
+        <button class="btn btn-prog" id="mbtn" onclick="runSynth()" style="font-size:11px;">▶ Build &amp; Program</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let running=false, moisture=50, thresh=50, t=0;
+let siInt=null, auInt=null, auOn=false;
+let wd={s:[],p:[],lg:[],lr:[]};
+const MW=50;
+let mAngle=0, mSpin=false;
+let programmed=false, bswOn=false;
+let curView='sch';
+
+// ── WAVEFORM ──
+const wc=document.getElementById('wc');
+const wx=wc.getContext('2d');
+function drawWave(){
+  const W=wc.width,H=wc.height;
+  wx.clearRect(0,0,W,H);
+  wx.fillStyle='#0d1220';wx.fillRect(0,0,W,H);
+  wx.strokeStyle='#1e2d45';wx.lineWidth=.4;
+  for(let i=0;i<6;i++){const y=H/5*i;wx.beginPath();wx.moveTo(0,y);wx.lineTo(W,y);wx.stroke();}
+  function sig(d,col,yT,yB){
+    if(d.length<2)return;
+    wx.strokeStyle=col;wx.lineWidth=1.4;wx.shadowColor=col;wx.shadowBlur=2;
+    wx.beginPath();const step=W/MW;
+    for(let i=0;i<d.length;i++){
+      const x=i*step,y=d[i]?yT:yB;
+      if(i===0)wx.moveTo(x,y);
+      else{const py=d[i-1]?yT:yB;if(py!==y)wx.lineTo(x,py);wx.lineTo(x,y);}
+    }
+    wx.stroke();wx.shadowBlur=0;
+  }
+  wx.fillStyle='#475569';wx.font='7px JetBrains Mono';
+  wx.fillText('s',2,12);wx.fillText('p',2,30);wx.fillText('lg',2,48);wx.fillText('lr',2,66);
+  sig(wd.s,'#f59e0b',5,20);sig(wd.p,'#00d4aa',23,38);
+  sig(wd.lg,'#22c55e',41,56);sig(wd.lr,'#ef4444',59,74);
+}
+
+// ── LOGIC ──
+function calc(m){
+  const ss=m<thresh?0:1;
+  return{ss,ps:ss===0?1:0,ls:ss===0?1:0,lr:ss===0?0:1};
+}
+
+// ── WIRE HELPERS ──
+function setWire(id,cls){
+  const el=document.getElementById(id);
+  if(el)el.setAttribute('class',cls);
+}
+
+// ── APPLY STATE ──
+function applyState(ss,ps,ls,lr){
+  // Schematic wires
+  setWire('wAO',   ss===0?'wo':'wi');
+  setWire('sA0',   ss===0?'wo':'wi');
+  setWire('wR1',   ps===1?'wa':'wi');
+  setWire('wBI',   ps===1?'wa':'wi');
+  setWire('qBL',   ps===1?'wa':'wi');
+  setWire('wCL',   ps===1?'wb':'wi');
+  setWire('wCM',   ps===1?'wb':'wi');
+  setWire('wEM',   ps===1?'wa':'wi');
+  setWire('wEG',   ps===1?'wa':'wi');
+  setWire('sP7',   ps===1?'wa':'wi');
+  setWire('wR2',   ls===1?'wg':'wi');
+  setWire('wR2L',  ls===1?'wg':'wi');
+  setWire('wGND1', ls===1?'wg':'wi');
+  setWire('sP6',   ls===1?'wg':'wi');
+  setWire('wR3',   lr===1?'wr':'wi');
+  setWire('wR3L',  lr===1?'wr':'wi');
+  setWire('wGND2', lr===1?'wr':'wi');
+  setWire('sP8',   lr===1?'wr':'wi');
+
+  // Transistor arrow
+  const qa=document.getElementById('qArr');
+  if(qa)qa.setAttribute('fill',ps===1?'#00d4aa':'#4a4a7a');
+
+  // Motor spin
+  mSpin=ps===1;
+  const ms2=document.getElementById('mSt');
+  if(ms2){ms2.textContent=ps===1?'ON':'OFF';ms2.setAttribute('fill',ps===1?'#00d4aa':'#2a2a50');
+    if(ps===1)ms2.setAttribute('filter','url(#gC)');else ms2.removeAttribute('filter');}
+  const rot=document.getElementById('mRotor');
+  if(rot)rot.querySelectorAll('line').forEach(l=>l.setAttribute('stroke',ps===1?'#0ea5e9':'#2a2a55'));
+
+  // Green LED
+  const lgb=document.getElementById('ldGb'),lgbr=document.getElementById('ldGbr');
+  const lggl=document.getElementById('ldGgl'),lgar=document.getElementById('ldGar');
+  if(ls===1){
+    lgb&&(lgb.setAttribute('fill','#22c55e'),lgb.setAttribute('stroke','#22c55e'),lgb.setAttribute('filter','url(#gG)'));
+    lgbr&&lgbr.setAttribute('stroke','#22c55e');
+    lggl&&(lggl.setAttribute('fill','rgba(34,197,94,0.3)'),lggl.setAttribute('opacity','1'));
+    lgar&&lgar.setAttribute('opacity','1');
+  }else{
+    lgb&&(lgb.setAttribute('fill','#0a1e0a'),lgb.setAttribute('stroke','#1a4a1a'),lgb.removeAttribute('filter'));
+    lgbr&&lgbr.setAttribute('stroke','#1a4a1a');
+    lggl&&lggl.setAttribute('opacity','0');
+    lgar&&lgar.setAttribute('opacity','.1');
+  }
+
+  // Red LED
+  const lrb=document.getElementById('ldRb'),lrbr=document.getElementById('ldRbr');
+  const lrgl=document.getElementById('ldRgl');
+  if(lr===1){
+    lrb&&(lrb.setAttribute('fill','#ef4444'),lrb.setAttribute('stroke','#ef4444'),lrb.setAttribute('filter','url(#gR)'));
+    lrbr&&lrbr.setAttribute('stroke','#ef4444');
+    lrgl&&(lrgl.setAttribute('fill','rgba(239,68,68,0.3)'),lrgl.setAttribute('opacity','1'));
+  }else{
+    lrb&&(lrb.setAttribute('fill','#1e0808'),lrb.setAttribute('stroke','#4a1a1a'),lrb.removeAttribute('filter'));
+    lrbr&&lrbr.setAttribute('stroke','#4a1a1a');
+    lrgl&&lrgl.setAttribute('opacity','0');
+  }
+
+  // FPGA status text in schematic
+  const fs=document.getElementById('fpgaSt');
+  if(fs){
+    if(!programmed){fs.textContent='NOT PROGRAMMED';fs.setAttribute('fill','#333');}
+    else if(!running){fs.textContent='PROGRAMMED — IDLE';fs.setAttribute('fill','#006a50');}
+    else if(ps===1){fs.textContent='PUMP ON — SOIL DRY';fs.setAttribute('fill','#00d4aa');}
+    else{fs.textContent='PUMP OFF — SOIL WET';fs.setAttribute('fill','#005a40');}
+  }
+
+  // Signal value panel
+  const vals=[ss===0?0:1,ps,ls,lr];
+  ['sv0','sv1','sv2','sv3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el){el.textContent=vals[i]?"1'b1":"1'b0";el.className='sv '+(vals[i]?'hi':'lo');}
+  });
+
+  // Moisture bar in schematic
+  const fw=4+(moisture/100)*72;
+  const mf=document.getElementById('smf');if(mf)mf.setAttribute('width',fw);
+  const mv=document.getElementById('smv');if(mv)mv.textContent=moisture+'%';
+
+  // Soil signal label
+  document.getElementById('sSig').textContent=ss===0?"1'b0 (DRY)":"1'b1 (WET)";
+
+  // Board LEDs update
+  boardUpdate(ps,lr);
+
+  // Waveform
+  wd.s.push(ss===1?1:0);wd.p.push(ps);wd.lg.push(ls);wd.lr.push(lr);
+  if(wd.s.length>MW){wd.s.shift();wd.p.shift();wd.lg.shift();wd.lr.shift();}
+  drawWave();
+}
+
+// ── BOARD LEDs UPDATE ──
+function boardUpdate(ps,lr){
+  const ld0=document.getElementById('bLD0');
+  const ld1=document.getElementById('bLD1');
+  const ld2=document.getElementById('bLD2');
+  const ld3=document.getElementById('bLD3');
+  const jled=document.getElementById('bJled');
+  const bst=document.getElementById('bBst');
+  const sst=document.getElementById('bSst');
+
+  const{ss}=calc(moisture);
+  if(sst)sst.textContent=`soil = 1'b${ss===0?'0 (DRY)':'1 (WET)'}`;
+
+  if(!programmed){
+    ld0&&(ld0.setAttribute('fill','#051005'),ld0.setAttribute('stroke','#0d2a0d'),ld0.removeAttribute('filter'));
+    ld1&&(ld1.setAttribute('fill','#150505'),ld1.setAttribute('stroke','#2a0d0d'),ld1.removeAttribute('filter'));
+    ld2&&(ld2.setAttribute('fill','#04040f'),ld2.setAttribute('stroke','#0c0c2a'),ld2.removeAttribute('filter'));
+    ld3&&(ld3.setAttribute('fill','#0e0d02'),ld3.setAttribute('stroke','#2a2804'),ld3.removeAttribute('filter'));
+    jled&&(jled.setAttribute('fill','#0a0a18'),jled.removeAttribute('filter'));
+    bst&&(bst.textContent='NOT PROGRAMMED',bst.setAttribute('fill','#2a5a30'));
+    return;
+  }
+
+  // When programmed
+  jled&&(jled.setAttribute('fill','#0055ff'),jled.setAttribute('stroke','#0077ff'),jled.setAttribute('filter','url(#bgB)'));
+  ld2&&(ld2.setAttribute('fill','#0055ff'),ld2.setAttribute('stroke','#007bff'),ld2.setAttribute('filter','url(#bgB)'));
+  ld3&&(ld3.setAttribute('fill','#f59e0b'),ld3.setAttribute('stroke','#fbbf24'),ld3.setAttribute('filter','url(#bgC)'));
+
+  if(ps===1){
+    ld0&&(ld0.setAttribute('fill','#22c55e'),ld0.setAttribute('stroke','#4ade80'),ld0.setAttribute('filter','url(#bgC)'));
+    ld1&&(ld1.setAttribute('fill','#150505'),ld1.setAttribute('stroke','#2a0d0d'),ld1.removeAttribute('filter'));
+    bst&&(bst.textContent='PUMP ON — SOIL DRY',bst.setAttribute('fill','#00d4aa'));
+  }else{
+    ld0&&(ld0.setAttribute('fill','#051005'),ld0.setAttribute('stroke','#0d2a0d'),ld0.removeAttribute('filter'));
+    ld1&&(ld1.setAttribute('fill','#ef4444'),ld1.setAttribute('stroke','#f87171'),ld1.setAttribute('filter','url(#bgR)'));
+    bst&&(bst.textContent='PUMP OFF — SOIL WET',bst.setAttribute('fill','#22c55e'));
+  }
+
+  // Trace line colors
+  const t1=document.getElementById('bTsoil');
+  const t2=document.getElementById('bTpump');
+  const t3=document.getElementById('bTld0');
+  const t4=document.getElementById('bTld1');
+  if(t1)t1.setAttribute('stroke',ss===0?'#c07010':'#2a3a20');
+  if(t2)t2.setAttribute('stroke',ps?'#00a888':'#1a3a10');
+  if(t3)t3.setAttribute('stroke',ps?'#1a8a40':'#1a3a10');
+  if(t4)t4.setAttribute('stroke',lr?'#aa2020':'#2a1010');
+}
+
+// ── BOARD SWITCH ──
+function boardSwToggle(){
+  if(!programmed){showToast('⚠ Program FPGA first!');return;}
+  bswOn=!bswOn;
+  const sw=document.getElementById('bSW0');
+  const st=document.getElementById('bSW0t');
+  if(bswOn){
+    sw&&(sw.setAttribute('fill','#0a3a0a'),sw.setAttribute('stroke','#1a7a1a'));
+    st&&(st.textContent='ON',st.setAttribute('fill','#4ade80'));
+    document.getElementById('mSlider').value=20;onSlide(20);
+    showToast('SW0 ON → Soil DRY → Pump ON');
+  }else{
+    sw&&(sw.setAttribute('fill','#280808'),sw.setAttribute('stroke','#5a1010'));
+    st&&(st.textContent='OFF',st.setAttribute('fill','#aa2020'));
+    document.getElementById('mSlider').value=80;onSlide(80);
+    showToast('SW0 OFF → Soil WET → Pump OFF');
+  }
+}
+
+// ── MOTOR SPIN ──
+(function spin(){
+  if(mSpin)mAngle=(mAngle+5)%360;
+  const r=document.getElementById('mRotor');
+  if(r)r.setAttribute('transform',`rotate(${mAngle} 764 95)`);
+  requestAnimationFrame(spin);
+})();
+
+// ── SIMULATION ──
+function startSim(){
+  if(!programmed){showToast('⚠ Program FPGA first!');openSynth();return;}
+  if(running)return;
+  running=true;
+  document.getElementById('runBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='flex';
+  document.getElementById('badge').textContent='RUNNING';
+  document.getElementById('badge').className='badge running';
+  document.getElementById('sdot').className='sd active';
+  document.getElementById('stxt').textContent='Simulating...';
+  addLog('info','Simulation started — irrigation_system.v');
+  addLog('ok','Spartan-6 bitstream active @ 100 MHz');
+  const{ss,ps,ls,lr}=calc(moisture);
+  applyState(ss,ps,ls,lr);
+  siInt=setInterval(()=>{
+    t+=10;
+    document.getElementById('stime').textContent=`t = ${t} ns`;
+    document.getElementById('wtime').textContent=`t=${t}ns`;
+    const{ss,ps,ls,lr}=calc(moisture);
+    applyState(ss,ps,ls,lr);
+    if(t%100===0){
+      const st2=ps?'PUMP ON — GREEN LED ON':'PUMP OFF — RED LED ON';
+      addLog(ps?'ok':'','['+t+'ns] soil='+ss+' pump='+ps+' | '+st2);
+    }
+  },300);
+  showToast('▶ Simulation Running');
+}
+
+function stopSim(){
+  running=false;clearInterval(siInt);mSpin=false;
+  document.getElementById('runBtn').style.display='flex';
+  document.getElementById('stopBtn').style.display='none';
+  document.getElementById('badge').textContent=programmed?'PROGRAMMED':'IDLE';
+  document.getElementById('badge').className='badge '+(programmed?'programmed':'');
+  document.getElementById('sdot').className='sd '+(programmed?'prog':'');
+  document.getElementById('stxt').textContent=programmed?'Programmed — Ready':'Idle';
+  addLog('warn','Simulation stopped at t='+t+'ns');
+  showToast('■ Stopped');
+}
+
+function doReset(){
+  stopSim();t=0;wd={s:[],p:[],lg:[],lr:[]};drawWave();
+  applyState(1,0,0,1);
+  document.getElementById('stime').textContent='t = 0 ns';
+  document.getElementById('wtime').textContent='t=0';
+  document.getElementById('log').innerHTML=
+    '<div class="le info"><span class="lts">[0ns]</span><span>Reset complete.</span></div>'+
+    '<div class="le"><span class="lts">[--]</span><span>'+(programmed?'Programmed — Press ▶ Run.':'Program FPGA then Run.')+'</span></div>';
+  showToast('⟳ Reset');
+}
+
+// ── SLIDERS ──
+function onSlide(v){
+  moisture=parseInt(v);
+  document.getElementById('mLabel').textContent=v+'%';
+  const{ss,ps,ls,lr}=calc(moisture);
+  document.getElementById('sSig').textContent=ss===0?"1'b0 (DRY)":"1'b1 (WET)";
+  const fw=4+(moisture/100)*72;
+  const mf=document.getElementById('smf');if(mf)mf.setAttribute('width',fw);
+  const mv=document.getElementById('smv');if(mv)mv.textContent=v+'%';
+  if(running){
+    applyState(ss,ps,ls,lr);
+    addLog(ps?'ok':'','Moisture='+v+'% → soil='+ss+' pump='+ps);
+  }else{
+    boardUpdate(ps,lr);
+    const sst=document.getElementById('bSst');
+    if(sst)sst.textContent=`soil = 1'b${ss===0?'0 (DRY)':'1 (WET)'}`;
+  }
+}
+
+function onThresh(v){
+  thresh=parseInt(v);document.getElementById('tLabel').textContent=v;
+  if(running){const{ss,ps,ls,lr}=calc(moisture);applyState(ss,ps,ls,lr);}
+}
+
+function doAuto(btn){
+  auOn=!auOn;btn.classList.toggle('on',auOn);
+  if(auOn){
+    let dir=-1,val=moisture;
+    auInt=setInterval(()=>{
+      val+=dir*2;if(val<=0){val=0;dir=1;}if(val>=100){val=100;dir=-1;}
+      document.getElementById('mSlider').value=val;onSlide(val);
+    },250);
+    addLog('info','Auto-cycle enabled');
+  }else{clearInterval(auInt);addLog('warn','Auto-cycle off');}
+}
+
+// ── TABS ──
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tc-'+name).classList.add('active');
+}
+
+// ── VIEW SWITCH ──
+function setView(v){
+  curView=v;
+  document.getElementById('vSch').className='vb'+(v==='sch'?' active':'');
+  document.getElementById('vBrd').className='vb'+(v==='brd'?' active':'');
+  const sv=document.getElementById('schView');
+  const bv=document.getElementById('brdView');
+  sv.style.display=v==='sch'?'':'none';
+  bv.style.display=v==='brd'?'flex':'none';
+  const tl=document.getElementById('cvTitle');
+  if(tl)tl.textContent=v==='sch'?'FPGA Automatic Irrigation — Circuit Schematic':'Spartan-6 Physical Board — Component Layout';
+}
+
+// ── LINE NUMBERS ──
+function updLN(){
+  const n=document.getElementById('codeEd').value.split('\n').length;
+  let s='';for(let i=1;i<=n;i++)s+=i+'<br>';
+  document.getElementById('lnum').innerHTML=s;
+}
+
+// ── LOG ──
+function addLog(type,msg){
+  const a=document.getElementById('log');
+  const el=document.createElement('div');
+  el.className='le '+type;
+  el.innerHTML=`<span class="lts">[${t}ns]</span><span>${msg}</span>`;
+  a.appendChild(el);a.scrollTop=a.scrollHeight;
+  while(a.children.length>80)a.removeChild(a.firstChild);
+}
+
+// ── TOAST ──
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2400);
+}
+
+// ── SYNTHESIS ──
+function openSynth(){document.getElementById('mo').classList.add('open');}
+function closeSynth(){document.getElementById('mo').classList.remove('open');}
+
+const STEPS=[
+  {logs:['Parsing irrigation_system.v...','3 inputs, 3 outputs found','Syntax check: PASSED']},
+  {logs:['XST: analyzing RTL...','12 LUT6 primitives synthesized','28 flip-flops inferred (debounce + logic)']},
+  {logs:['Translating to Spartan-6 slices...','8 slices used / 5765 (0%)','IOB constraints applied from UCF file']},
+  {logs:['Running place & route...','All 6 IOBs placed OK','Route: 100% complete','Timing: 98.4 MHz — MET']},
+  {logs:['Generating bitstream...','irrigation_system.bit created','File size: 340,092 bytes','CRC: PASSED']},
+  {logs:['iMPACT: scanning JTAG chain...','Device: XC6SLX9 found (IDCODE: 0x0424A093)','Erasing config...','Programming bitstream...','Verify: PASSED','✓ Device programmed successfully!']},
+];
+
+let synthBusy=false;
+async function runSynth(){
+  if(synthBusy)return;
+  synthBusy=true;
+  document.getElementById('mbtn').disabled=true;
+  document.getElementById('mstxt').textContent='Building...';
+  mlog('Starting build → irrigation_system.v + constraints.ucf');
+
+  for(let i=0;i<STEPS.length;i++){
+    const s=STEPS[i];
+    document.getElementById('ms'+i).className='mstep run';
+    document.getElementById('mstxt').textContent=
+      ['Parse Verilog','XST Synthesis','Translate & Map','Place & Route','Gen Bitstream','Program JTAG'][i]+'...';
+    document.getElementById('mpf').style.width=((i/STEPS.length)*90)+'%';
+    const t0=Date.now();
+    for(const lg of s.logs){
+      await dly(([900,1400,1100,1600,1000,1300][i])/s.logs.length);
+      mlog(lg, lg.includes('✓')||lg.includes('PASSED')?'ok':lg.includes('WARNING')?'warn':'');
+    }
+    const el=((Date.now()-t0)/1000).toFixed(1)+'s';
+    document.getElementById('mt'+i).textContent=el;
+    document.getElementById('ms'+i).className='mstep done';
+    document.getElementById('ms'+i).querySelector('.mico').textContent='✅';
+    addLog('prog',['Parse HDL','XST Synth','Translate+Map','Place+Route','Bitstream','JTAG'][i]+' → DONE ('+el+')');
+  }
+
+  document.getElementById('mpf').style.width='100%';
+  document.getElementById('mstxt').textContent='✅ FPGA programmed successfully!';
+  document.getElementById('mstxt').className='mst done';
+  mlog('=====================================','ok');
+  mlog('✓ FPGA PROGRAMMING COMPLETE','ok');
+  mlog('Device: XC6SLX9-3TQG144','ok');
+  mlog('Status: CONFIGURED & RUNNING','ok');
+  mlog('=====================================','ok');
+
+  programmed=true;synthBusy=false;
+
+  document.getElementById('progBtn').className='btn btn-prog done';
+  document.getElementById('progBtn').textContent='✅ FPGA Programmed';
+  document.getElementById('badge').textContent='PROGRAMMED';
+  document.getElementById('badge').className='badge programmed';
+  document.getElementById('sbrd').textContent='Board: PROGRAMMED ✓';
+  document.getElementById('sdot').className='sd prog';
+  document.getElementById('stxt').textContent='Programmed — Ready';
+  document.getElementById('bsBit').textContent='irrigation_system.bit';
+  document.getElementById('bsBit').style.color='var(--grn)';
+  document.getElementById('bsSt').textContent='CONFIGURED ✓';
+  document.getElementById('bsSt').style.color='var(--grn)';
+  addLog('ok','✅ FPGA programmed! Press ▶ Run Simulation.');
+  showToast('✅ FPGA Programmed!');
+
+  boardUpdate(0,1);
+  const fs=document.getElementById('fpgaSt');
+  if(fs){fs.textContent='PROGRAMMED — IDLE';fs.setAttribute('fill','#006a50');}
+
+  await dly(1400);
+  closeSynth();
+}
+
+function dly(ms){return new Promise(r=>setTimeout(r,ms));}
+
+function mlog(msg,cls=''){
+  const el=document.getElementById('mlog');
+  el.innerHTML+=`<br><span style="color:${cls==='ok'?'#22c55e':cls==='warn'?'#f59e0b':'#64748b'}">&gt; ${msg}</span>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+// ── INIT ──
+updLN();
+drawWave();
+applyState(1,0,0,1);
+setView('sch');
+</script>
+</body>
+</html>
