@@ -2,7 +2,7 @@
 
 An intelligent, deterministic, hardware-level irrigation controller utilizing a **Xilinx XC7A35T Artix-7 FPGA** programmed entirely in **Verilog HDL**. 
 
-Conventional automatic irrigation systems waste up to 40-60% of water and fail to account for the multi-dimensional nature of soil health. This system interfaces with an industrial JXCT 7-in-1 Soil Sensor via Modbus RTU RS485 to evaluate seven distinct soil parameters (Moisture, Temperature, EC, pH, Nitrogen, Phosphorus, Potassium) in parallel. By making real-time, multi-variable watering decisions, the system prevents severe crop damage caused by thermal shock, soil salinity spikes, and pH-induced nutrient lockout.
+Conventional automatic irrigation systems waste up to 40-60% of water and fail to account for the multi-dimensional nature of soil health. This system interfaces with an industrial JXCT 7-in-1 Soil Sensor via Modbus RTU RS485 to evaluate seven distinct soil parameters (Moisture, Temperature, EC, pH, Nitrogen, Phosphorus, Potassium) in parallel. By making real-time, multi-variable watering decisions, the system prevents severe crop damage caused by thermal shock, soil salinity spikes, & pH-induced nutrient lockout.
 
 ### 🚀 Live Interactive Simulator
 Because this project requires specific industrial sensors and FPGA hardware, our team engineered a custom interactive web simulator to demonstrate the hardware logic directly in the browser. 
